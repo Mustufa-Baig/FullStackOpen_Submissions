@@ -22,6 +22,13 @@ app.get('/api/persons', (request, response) => {
   })
 })
 
+app.get('/info', (request, response) => {
+  response.send(`<div>
+    <p>Phonebook has info for ${Person.length} people</p>
+    <p>${Date()}</p>
+  </div>`)
+})
+
 
 app.post('/api/persons', (request, response, next) => {
   const body = request.body
