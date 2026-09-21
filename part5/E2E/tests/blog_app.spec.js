@@ -24,6 +24,8 @@ describe('Blog app', () => {
   })
 
   test('Login form is shown', async ({ page }) => {
+    await page.goto('http://localhost:5173/login')
+
     await expect(page.getByText('Log in to application')).toBeVisible()
     await expect(page.getByLabel('username')).toBeVisible()
     await expect(page.getByLabel('password')).toBeVisible()
@@ -33,7 +35,7 @@ describe('Blog app', () => {
   describe('Login', () => {
     test('succeeds with correct credentials', async ({ page }) => {
       await loginWith(page, 'user1', 'password1')
-      await expect(page.getByText('Alice logged in')).toBeVisible()
+      await expect(page.getByText('logout')).toBeVisible()
     })
 
     test('fails with wrong credentials', async ({ page }) => {
@@ -45,12 +47,13 @@ describe('Blog app', () => {
   describe('When logged in', () => {
     beforeEach(async ({ page }) => {
       await loginWith(page, 'user1', 'password1')
+      await expect(page.getByText('logout')).toBeVisible()
     })
 
     test('a new blog can be created', async ({ page }) => {
       await createBlog(page, 'Hello world', 'John Doe', 'example.com')
 
-      await expect(page.getByText('Hello world John Doe')).toBeVisible()
+      await expect(page.getByText('Hello world by John Doe')).toBeVisible()
     })
 
     describe('and a blog exists', () => {
@@ -59,17 +62,16 @@ describe('Blog app', () => {
       })
   
       test('it can be liked', async ({ page }) => {
-        await page.getByRole('button', { name: 'view' }).click()
+        await page.getByText('Hello world by John Doe').click()
         
-        await expect(page.getByText('likes 0')).toBeVisible()
+        await expect(page.getByText('0 likes')).toBeVisible()
         await page.getByRole('button', { name: 'like' }).click()
 
-        await expect(page.getByText('likes 1')).toBeVisible()
+        await expect(page.getByText('1 likes')).toBeVisible()
       })
 
       test('it can be deleted by its user', async ({ page }) => {
-        await page.getByRole('button', { name: 'view' }).click()
-
+        await page.getByText('Hello world by John Doe').click()
 
         page.once('dialog', async dialog => {
           expect(dialog.type()).toBe('confirm')
@@ -82,12 +84,9 @@ describe('Blog app', () => {
       })
 
       test('it cannot be deleted by its another user', async ({ page }) => {
-        await page.getByRole('button', { name: 'logout' }).click()
         await loginWith(page, 'user2', 'password2')
 
-        await expect(page.getByText('Hello world John Doe')).toBeVisible()
-        
-        await page.getByRole('button', { name: 'view' }).click()
+        await page.getByText('Hello world by John Doe').click()
         await expect(page.getByRole('button', { name: 'remove' })).not.toBeVisible()
       })
     })
@@ -99,26 +98,25 @@ describe('Blog app', () => {
         await createBlog(page, 'TDD harms architecture', 'Robert C. Martin', 'http://blog.cleancoder.com/uncle-bob/2017/03/03/TDD-Harms-Architecture.html')
       })
 
-      test('they are arranged sorted by likes', async ({ page }) => {
-        await await page.getByText('React patterns Michael Chan').locator('..').getByRole('button', { name: 'view' }).click()
-        await likeBlog(page,'React patterns Michael Chan', 3)
-        await page.getByRole('button', { name: 'hide' }).click()
-
+      test('blogs are arranged sorted by likes', async ({ page }) => {
+        await await page.getByText('React patterns by Michael Chan').click()
+        await likeBlog(page, 3)
+        await page.goto('http://localhost:5173')
         
-        await await page.getByText('Go To Statement Considered Harmful Edsger W. Dijkstra').locator('..').getByRole('button', { name: 'view' }).click()
-        await likeBlog(page,'Go To Statement Considered Harmful Edsger W. Dijkstra', 5)
-        await page.getByRole('button', { name: 'hide' }).click()
-
+        await await page.getByText('Go To Statement Considered Harmful by Edsger W. Dijkstra').click()
+        await likeBlog(page, 5)
+        await page.goto('http://localhost:5173')
         
-        await await page.getByText('TDD harms architecture Robert C. Martin').locator('..').getByRole('button', { name: 'view' }).click()
-        await likeBlog(page,'TDD harms architecture Robert C. Martin', 7)
-        await page.getByRole('button', { name: 'hide' }).click()
+        await await page.getByText('TDD harms architecture by Robert C. Martin').click()
+        await likeBlog(page, 7)
+        await page.goto('http://localhost:5173')
         
+        await expect(page.getByText('React patterns by Michael Chan')).toBeVisible()
 
-        await expect(await page.locator('.blog > span').allTextContents()).toEqual([
-          'TDD harms architecture Robert C. Martin',
-          'Go To Statement Considered Harmful Edsger W. Dijkstra',
-          'React patterns Michael Chan'
+        await expect(await page.locator('ul').allTextContents()).toEqual([
+          'TDD harms architecture by Robert C. Martin'+
+          'Go To Statement Considered Harmful by Edsger W. Dijkstra'+
+          'React patterns by Michael Chan'
         ])
       })
     })
