@@ -26,6 +26,7 @@ blogsRouter.post('/', userExtractor, async (request, response) => {
     })
 
     const result = await blog.save()
+    await result.populate('user', { username: 1, name:1 })
 
 
     user.blogs = user.blogs.concat(result.id)
@@ -72,9 +73,9 @@ blogsRouter.delete('/:id', userExtractor, async (request, response) => {
 
 blogsRouter.put('/:id', userExtractor, async (request, response) => {
   try{
-    const user = await User.findById(request.user)
+    const requestUser = await User.findById(request.user)
 
-    if (!user) {
+    if (!requestUser) {
       return response.status(400).json({ error: 'userId missing or not valid' })
     }
 
@@ -84,17 +85,20 @@ blogsRouter.put('/:id', userExtractor, async (request, response) => {
       return response.status(404).json({ error: 'Blog not found' })
     }
 
-    if(selected.user.toString()!==user.id.toString()){
-      return response.status(403).json({ error: 'given Blog does not belong to User' })
-    }
+    const { user, title, author, url, likes } = request.body
 
     if (request.body.likes === undefined){
       return response.status(400).json({ error: 'missing `likes` in request' })
     }
     
-    selected.likes = request.body.likes
+    selected.user = user
+    selected.title = title
+    selected.author = author
+    selected.url = url
+    selected.likes = likes
 
     const updated = await selected.save()
+    await updated.populate('user', { username: 1, name:1 })
 
     return response.status(200).json(updated)
 
